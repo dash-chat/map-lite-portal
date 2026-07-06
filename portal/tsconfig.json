@@ -10,7 +10,7 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["svelte", "vite/client"]
+    "types": ["svelte", "vite/client", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts"]
 }
