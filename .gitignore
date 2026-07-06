@@ -1,2 +1,8 @@
 result
 .direnv/
+
+# per-device credentials
+devices/*.conf
+
+# downloaded RouterOS packages (also cached under XDG_CACHE_HOME)
+*.npk

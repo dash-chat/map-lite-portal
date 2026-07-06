@@ -9,68 +9,113 @@ one over wifi.
   **Connect** button logs them in through RouterOS's passwordless *trial*
   method (no user accounts).
 - `router/portal-setup.rsc.tpl` — idempotent RouterOS script that creates the
-  hotspot (rendered and imported by `just provision`).
-- `justfile` — all tooling: `just` lists the recipes, `just provision` points
-  at a powered-on mAP lite and does everything.
+  hotspot (rendered and imported by `just provision` / `just netinstall`).
+- `router/netinstall-firstboot.rsc.tpl` — one-time first-boot script that bakes
+  your credentials in during a reflash (see *Factory-fresh devices* below).
+- `devices/` — one gitignored `.conf` per mAP lite you own, holding its
+  credentials (see `devices/example.conf.sample`).
+- `justfile` — all tooling: `just` lists the recipes. `just provision`
+  configures a device over wifi; `just netinstall` reflashes one over ethernet.
 
 ## Requirements
 
-- `nix develop` shell (provides `just`, `openssh`, `sshpass`, `node` and
-  `pnpm`).
-- NetworkManager (`nmcli`) on this machine, used to join the device's wifi.
-  Not needed with `skip_wifi=1`.
+- `nix develop` shell (provides `just`, `openssh`, `sshpass`, `node`, `pnpm`,
+  and — on x86_64 Linux — MikroTik's `netinstall-cli`).
+- NetworkManager (`nmcli`) on this machine, used to scan for and join the
+  devices' wifi networks (and to set a static IP for `just netinstall`).
 - A mAP lite that is powered on with its wifi network in range, running
   RouterOS with the legacy `/interface wireless` stack (stock firmware on the
   mAP lite, both v6 and v7).
+- For `just netinstall`: an ethernet cable from the mAP lite to this machine.
+
+## Factory-fresh devices (netinstall)
+
+New RouterOS devices ship with a per-unit admin password on the sticker, and
+that password is **expired**: it works in WinBox/WebFig (which prompt you to
+change it) but ssh rejects it outright until it's changed. That makes a
+factory device impossible to provision over ssh without a manual first login.
+
+`just netinstall` sidesteps this by reflashing the device over ethernet with a
+clean RouterOS and your credentials baked in — the admin password is set
+locally on first boot, so ssh works immediately and the rest is automatic.
+Fill in the *desired* end-state credentials, then run it:
+
+```sh
+cp devices/example.conf.sample devices/living-room.conf   # edit ssid/wifi_key/admin_password
+just netinstall living-room                               # optional: trailing RouterOS version, default 7.23.1
+```
+
+It downloads the mipsbe RouterOS package (cached under `~/.cache/`), prompts
+you to connect ethernet and put the device into etherboot mode (unplug power,
+hold **RESET**, re-apply power holding RESET until the USR LED blinks → solid
+→ off, then release), flashes it with `sudo`, and — once it reboots as
+`192.168.88.1` — uploads the portal and configures the hotspot over the cable.
+No wifi and no working password needed up front.
+
+Already-provisioned devices (you know the admin password) don't need this —
+use `just provision` over wifi.
 
 ## Usage
 
-`just` lists all recipes. The main ones, in the order you'll meet them:
+Register each of your devices once — copy the sample and fill in the
+device's *current* credentials (for a factory-fresh device: the
+`MikroTik-XXXXXX` SSID from the sticker, empty key, empty password):
 
-Device already configured with these credentials — installs/updates the
-portal only:
+```sh
+cp devices/example.conf.sample devices/living-room.conf
+```
+
+The `.conf` files are gitignored, and `just provision` keeps them up to date
+when it changes a device's credentials. `just scan` shows which of your
+devices are in range.
+
+Provision — scans for your devices' networks, lets you pick one, and prompts
+for the target SSID / wifi key / admin password (enter keeps the current
+values):
+
+```sh
+just provision
+```
+
+Pass the target credentials as arguments to skip the prompts:
 
 ```sh
 just provision dash-portal 'secret123' 'adminpass'
 ```
 
-Factory-fresh device (open wifi named `MikroTik-XXXXXX`, empty admin
-password) — the last three arguments are the credentials to reach it *now*;
-the device ends up with the first three:
+Iterating on the webapp — rebuilds and re-uploads it, nothing else (`upload`
+and `cli` take a device name from `devices/`, or a raw admin password):
 
 ```sh
-just provision dash-portal 'secret123' 'adminpass' MikroTik-ABCDEF '' ''
-```
-
-Iterating on the webapp — rebuilds and re-uploads it, nothing else:
-
-```sh
-just upload 'adminpass'
+just upload living-room
 ```
 
 Other recipes: `just dev` (portal dev server), `just check` (svelte-check),
-`just cli 'adminpass'` (RouterOS shell on the device). Options go in front as
-variable overrides: `just skip_wifi=1 provision …` if this machine already
-reaches the router (e.g. over ethernet), `just router_ip=10.5.50.1 upload …`
-if the device doesn't use the default `192.168.88.1`.
+`just cli living-room` (RouterOS shell on the device). If the device doesn't
+use the default `192.168.88.1`, override in front: `just router_ip=10.5.50.1
+upload living-room`.
 
 ## What `just provision` does
 
-1. Joins the device's wifi with `nmcli` and finds the router (the wifi
-   gateway, falling back to `192.168.88.1`).
-2. Logs in as `admin` over ssh, trying the given password and the
+1. Scans with `nmcli` for the networks of the devices registered in
+   `devices/`, lets you pick one that's in range, and asks for the target
+   credentials.
+2. Joins the device's wifi and finds the router (the wifi gateway, falling
+   back to `192.168.88.1`).
+3. Logs in as `admin` over ssh, trying the stored password and the
    factory-default empty one.
-3. Builds the webapp and uploads `portal/dist` to `flash/portal` (that's
+4. Builds the webapp and uploads `portal/dist` to `flash/portal` (that's
    `just upload`; flash so the pages survive reboots — the mAP lite's root
    filesystem is a ramdisk).
-4. Imports the rendered `portal-setup.rsc`, which creates a hotspot server on
+5. Imports the rendered `portal-setup.rsc`, which creates a hotspot server on
    the LAN interface with `html-directory=flash/portal` and trial login
    (`trial-uptime-limit=0s` = unlimited sessions). The existing DHCP server
    and addressing from the default configuration are left untouched.
-5. Sets the admin password and wifi SSID/WPA2 key to the given values if they
-   differ (credentials go last, so a dropped wifi link can't interrupt the
-   setup; the script then reconnects with the new credentials).
-6. Verifies the hotspot is active.
+6. Sets the admin password and wifi SSID/WPA2 key to the target values if
+   they differ (credentials go last, so a dropped wifi link can't interrupt
+   the setup; it then reconnects with the new credentials).
+7. Verifies the hotspot is active and rewrites the device's `devices/` file
+   with the new credentials.
 
 The provisioning machine's MAC is added as a *bypassed* hotspot ip-binding
 (comment `map-lite-portal:host-bypass`) so the hotspot can never cut off

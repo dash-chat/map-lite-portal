@@ -1,0 +1,14 @@
+# Credentials of one mAP lite you own. Copy to devices/<name>.conf (those are
+# gitignored). Sourced by bash, so quote the values.
+#
+# For `just provision` (over wifi): the device's CURRENT credentials; it
+# updates this file when it changes them.
+#
+# For `just netinstall` (reflash over ethernet, recommended for factory-fresh
+# devices): the DESIRED end-state credentials you want baked in. This avoids
+# the factory sticker password, which ships expired and can't be used over ssh
+# until changed. admin_password must be non-empty; wifi_key is 8-63 chars or
+# empty for an open network.
+ssid="MikroTik-ABCDEF"
+wifi_key=""
+admin_password=""
