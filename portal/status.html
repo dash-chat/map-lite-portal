@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session status</title>
+</head>
+<body>
+<script>
+window.__HOTSPOT__ = {
+  page: "status",
+  ip: "$(ip)",
+  uptime: "$(uptime)",
+  bytesInNice: "$(bytes-in-nice)",
+  bytesOutNice: "$(bytes-out-nice)",
+  linkLogout: "$(link-logout)"
+};
+</script>
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f5;
+  color: #18181b;
+  padding: 1rem;
+}
+
+/* the Svelte mount point must not participate in the body's flex layout */
+#app {
+  display: contents;
+}
+
+/* simple pages (alogin, logout, error) without a card */
+body.plain {
+  text-align: center;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 2.5rem 2rem;
+  max-width: 24rem;
+  width: 100%;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+p {
+  color: #52525b;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+body.plain p {
+  color: inherit;
+  margin-bottom: 1rem;
+}
+
+a {
+  color: #2563eb;
+}
+
+.error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.button {
+  display: block;
+  background: #2563eb;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: 0.75rem;
+}
+
+.button:active {
+  background: #1d4ed8;
+}
+
+/* session details on status.html */
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+dt {
+  color: #52525b;
+}
+
+dd {
+  text-align: right;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #18181b;
+    color: #fafafa;
+  }
+
+  .card {
+    background: #27272a;
+  }
+
+  p,
+  dt {
+    color: #a1a1aa;
+  }
+
+  .error {
+    background: #3f1d1d;
+    color: #fca5a5;
+  }
+}
